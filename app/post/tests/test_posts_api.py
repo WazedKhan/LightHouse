@@ -11,10 +11,15 @@ from rest_framework import status
 
 from core.models import Post
 
-from post.serializers import PostSerializer
+from post.serializers import PostSerializer, PostDetailSerializer
 
 
 POST_URL = reverse('post:post-list')
+
+
+def detail_url(post_id):
+    """Create and returns a detail URL"""
+    return reverse('post:post-detail', args=[post_id])
 
 
 def create_post(user, **params):
@@ -78,5 +83,16 @@ class PrivatePostApiTests(TestCase):
 
         posts = Post.objects.filter(user=self.user)
         serializer = PostSerializer(posts, many=True)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, serializer.data)  # type: ignore
+
+    def test_get_post_detail(self):
+        """Test get post detail"""
+        post = create_post(user=self.user)
+
+        url = detail_url(post.id)  # type: ignore
+        res = self.client.get(url)
+
+        serializer = PostDetailSerializer(post)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, serializer.data)  # type: ignore
