@@ -9,6 +9,7 @@ from post import views
 
 router = DefaultRouter()
 router.register('post', views.PostViewSet)
+router.register('tags', views.TagViewSet)
 
 app_name = 'post'
 urlpatterns = [
