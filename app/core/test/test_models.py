@@ -1,6 +1,7 @@
 """
 Test cases for models.
 """
+from unittest.mock import patch
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
@@ -74,3 +75,12 @@ class ModelTests(TestCase):
         tag = models.Tag.objects.create(user=user, name='Earth')
 
         self.assertEqual(str(tag), tag.name)
+
+    @patch('core.models.uuid.uuid4')
+    def test_post_file_name_uuid(self, mock_uuid):
+        """Test generating image path"""
+        uuid = 'test-uuid'
+        mock_uuid.return_value = uuid
+        file_path = models.post_image_path(None, 'example.jpg')
+
+        self.assertEqual(file_path, f'uploads/post/{uuid}.jpg')

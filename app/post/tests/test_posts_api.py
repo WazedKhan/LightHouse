@@ -1,7 +1,9 @@
 """
 Test Post APIs
 """
-
+import os
+import tempfile
+from PIL import Image
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -15,6 +17,11 @@ from post.serializers import PostSerializer, PostDetailSerializer
 
 
 POST_URL = reverse('post:post-list')
+
+
+def image_upload_url(post_id):
+    """Create and return a image upload url"""
+    return reverse('post:post-upload-image', args=[post_id])
 
 
 def detail_url(post_id):
@@ -285,3 +292,40 @@ class PrivatePostApiTests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(post.tags.count(), 0)
+
+
+class ImageUplaodTests(TestCase):
+    """Test for the image upload API"""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = create_user(email='test@example.com', password='test123')
+        self.client.force_authenticate(self.user)
+        self.post = create_post(self.user)
+
+    def tearDown(self):
+        self.post.image.delete()
+
+    def test_upload_image(self):
+        """Test uploading image to a post"""
+        url = image_upload_url(self.post.id)  # type: ignore
+
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as img_file:
+            img = Image.new('RGB', (10, 10))
+            img.save(img_file, format='JPEG')
+            img_file.seek(0)
+            payload = {'image': img_file}
+            res = self.client.post(url, payload, format='multipart')
+
+        self.post.refresh_from_db()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('image', res.data)  # type: ignore
+        self.assertTrue(os.path.exists(self.post.image.path))
+
+    def test_upload_image_bad_request(self):
+        """Test uploading a invalid image"""
+        url = image_upload_url(self.post.id)  # type: ignore
+        payload = {'image': 'notanimage'}
+        res = self.client.post(url, payload, format='multipart')
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)

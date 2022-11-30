@@ -1,10 +1,20 @@
 """
 Database models.
 """
+import os
+import uuid
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager,
-                                        PermissionsMixin)
+from django.contrib.auth.models import (
+    AbstractBaseUser, BaseUserManager, PermissionsMixin)
+
+
+def post_image_path(instance, filename):
+    """Generate file path for new post image"""
+    file_extension = os.path.splitext(filename)[1]
+    filename = f'{uuid.uuid4()}{file_extension}'
+
+    return os.path.join('uploads', 'post', filename)
 
 
 class UserManager(BaseUserManager):
@@ -52,6 +62,7 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField(to='core.Tag')
+    image = models.ImageField(null=True, upload_to=post_image_path)
 
     def __str__(self):
         return self.title
