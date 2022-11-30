@@ -96,3 +96,20 @@ class PrivatePostApiTests(TestCase):
         serializer = PostDetailSerializer(post)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data, serializer.data)  # type: ignore
+
+    def test_create_post(self):
+        """Test creating a post"""
+        payload = {
+            'title': 'Test Title',
+            'content': 'Test Content'
+        }
+
+        res = self.client.post(POST_URL, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        post = Post.objects.get(id=res.data['id'])  # type: ignore
+
+        for k, v in payload.items():
+            self.assertEqual(getattr(post, k), v)
+
+        self.assertEqual(post.user, self.user)
