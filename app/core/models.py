@@ -43,6 +43,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Post(models.Model):
+    """Post model"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE)
@@ -50,6 +51,18 @@ class Post(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    tags = models.ManyToManyField(to='core.Tag')
 
     def __str__(self):
         return self.title
+
+
+class Tag(models.Model):
+    """Tag model for filtering post"""
+    name = models.CharField(max_length=150)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
