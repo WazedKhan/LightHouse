@@ -200,4 +200,4 @@ class PrivatePostApiTests(TestCase):
         res = self.client.delete(url)
 
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertTrue(Post.objects.filter(id=post.id).exists())  # type: ignore
+        self.assertTrue(Post.objects.filter(id=post.id).exists())  # type: ignore # noqa
