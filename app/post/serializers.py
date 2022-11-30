@@ -23,18 +23,34 @@ class PostSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'content', 'tags']
         read_only_fields = ['id']
 
-    def create(self, validated_data):
-        tags = validated_data.pop('tags', [])
-        post = Post.objects.create(**validated_data)
-
+    def _get_or_create_tags(self, tags, post):
+        """Handle getting or creating tags as needed."""
         for tag in tags:
-            tag_object, created = Tag.objects.get_or_create(
+            tag_obj, created = Tag.objects.get_or_create(
                 user=self.context['request'].user,
                 **tag
             )
-            post.tags.add(tag_object)
+            post.tags.add(tag_obj)
 
+    def create(self, validated_data):
+        """Create a recipe."""
+        tags = validated_data.pop('tags', [])
+        post = Post.objects.create(**validated_data)
+        self._get_or_create_tags(tags, post)
         return post
+
+    def update(self, instance, validated_data):
+        """Update recipe."""
+        tags = validated_data.pop('tags', None)
+        if tags is not None:
+            instance.tags.clear()
+            self._get_or_create_tags(tags, instance)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance
 
 
 class PostDetailSerializer(PostSerializer):
