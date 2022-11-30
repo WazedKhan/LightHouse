@@ -22,6 +22,11 @@ def detail_url(post_id):
     return reverse('post:post-detail', args=[post_id])
 
 
+def create_user(**params):
+    """Create and return a new user."""
+    return get_user_model().objects.create_user(**params)  # type: ignore
+
+
 def create_post(user, **params):
     """create and return a sample post"""
     defaults = {
@@ -53,7 +58,7 @@ class PrivatePostApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = get_user_model().objects.create(
-            email='user@example.com',
+            email='test@example.com',
             password='pass123word'
         )
         self.client.force_authenticate(self.user)
@@ -113,3 +118,86 @@ class PrivatePostApiTests(TestCase):
             self.assertEqual(getattr(post, k), v)
 
         self.assertEqual(post.user, self.user)
+
+    def test_full_update(self):
+        """Test partial update of post"""
+        post = create_post(
+            user=self.user,
+            title='Post Title',
+            content='Post Content'
+        )
+
+        payload = {
+            'title': 'Post Title Updated'
+        }
+
+        url = detail_url(post_id=post.id)  # type: ignore
+        res = self.client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        post.refresh_from_db()
+        self.assertEqual(post.title, payload['title'])
+        self.assertEqual(post.user, self.user)
+
+    def test_partial_update(self):
+        """Test partial update of post"""
+        post = create_post(
+            user=self.user,
+            title='Post Title',
+            content='Post Content'
+        )
+
+        payload = {
+            'title': 'Post Title Updated',
+            'content': 'Post Content Updated'
+        }
+
+        url = detail_url(post_id=post.id)  # type: ignore
+        res = self.client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        post.refresh_from_db()
+        self.assertEqual(post.title, payload['title'])
+        self.assertEqual(post.content, payload['content'])
+        self.assertEqual(post.user, self.user)
+
+    def test_update_user_response_error(self):
+        """Test partial update of post"""
+        post = create_post(
+            user=self.user,
+            title='Post Title',
+            content='Post Content'
+        )
+        other_user = create_user(email='user2@exampl.com', password='test123')
+        payload = {
+            'user': other_user
+        }
+
+        url = detail_url(post_id=post.id)  # type: ignore
+        res = self.client.put(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        post.refresh_from_db()
+        self.assertEqual(post.user, self.user)
+        self.assertNotEqual(post.user, other_user)
+
+    def test_delete_post(self):
+        """Test deleting a post"""
+        post = create_post(user=self.user)
+
+        url = detail_url(post.id)  # type: ignore
+        res = self.client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Post.objects.filter(id=post.id).exists())  # type: ignore # noqa
+
+    def test_post_other_user_post_error(self):
+        """Test tring to delete other user post gives error"""
+        new_user = create_user(email='new@example.com', password='test123')
+        post = create_post(user=new_user)
+
+        url = detail_url(post.id)  # type: ignore
+        res = self.client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Post.objects.filter(id=post.id).exists())  # type: ignore
